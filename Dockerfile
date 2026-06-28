@@ -4,25 +4,25 @@ WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Copy package.json AND prisma schema BEFORE npm install
-# This way postinstall (prisma generate) can find the schema
-COPY package.json package-lock.json* prisma/ ./prisma/
+# Copy prisma schema first — needed if postinstall triggers prisma generate
+COPY prisma ./prisma
+
+# Copy package files
 COPY package.json package-lock.json* ./
 
-# Remove postinstall from package.json before npm install
-# We'll run prisma generate explicitly after copying source
+# Install dependencies (skip postinstall scripts)
 RUN npm install --ignore-scripts
 
-# Copy source code
+# Copy everything else
 COPY . .
 
-# Generate Prisma client (schema is now available)
+# Generate Prisma client (schema is now available at ./prisma/schema.prisma)
 RUN npx prisma generate
 
-# Build frontend with Vite
+# Build frontend
 RUN npm run build
 
-# Remove devDependencies after build
+# Remove devDependencies
 RUN npm prune --production
 
 EXPOSE 3000
