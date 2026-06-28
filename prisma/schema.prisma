@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -14,9 +13,7 @@ model User {
   password      String
   name          String
   referralCode  String    @unique @map("referral_code")
-  referredBy    String?   @map("referred_by")
-  referrer      User?     @relation("Referrals", fields: [referredBy], references: [id])
-  referrals     User[]    @relation("Referrals")
+  referredBy    String?   @map("referral_by")
   balance       Float     @default(0)
   totalDeposit  Float     @default(0) @map("total_deposit")
   totalWithdraw Float     @default(0) @map("total_withdraw")
@@ -25,31 +22,31 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  transactions  Transaction[]
-  bets          Bet[]
-  depositRequests   DepositRequest[]
+  transactions       Transaction[]
+  bets               Bet[]
+  depositRequests    DepositRequest[]
   withdrawalRequests WithdrawalRequest[]
+  notifications      Notification[]
+  dailyBonuses       DailyBonus[]
+  chatMessages       ChatMessage[]
+  aviatorBets        AviatorBet[]
+  chickenSessions    ChickenSession[]
 
-  notifications     Notification[]
-  dailyBonuses      DailyBonus[]
-  chatMessages      ChatMessage[]
-  aviatorBets       AviatorBet[]
-  chickenSessions   ChickenSession[]
   @@map("users")
 }
 
 model Transaction {
-  id          String   @id @default(cuid())
-  userId      String   @map("user_id")
-  user        User     @relation(fields: [userId], references: [id])
-  type        String   // deposit, withdrawal, bet_place, bet_win, referral_bonus, bonus
-  amount      Float
-  balanceBefore Float @map("balance_before")
-  balanceAfter  Float @map("balance_after")
-  description String?
-  referenceId String?  @map("reference_id")
-  status      String   @default("completed") // pending, completed, failed, cancelled
-  createdAt   DateTime @default(now()) @map("created_at")
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id])
+  type          String
+  amount        Float
+  balanceBefore Float    @map("balance_before")
+  balanceAfter  Float    @map("balance_after")
+  description   String?
+  referenceId   String?  @map("reference_id")
+  status        String   @default("completed")
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([type])
@@ -58,19 +55,19 @@ model Transaction {
 }
 
 model Bet {
-  id          String   @id @default(cuid())
-  userId      String   @map("user_id")
-  user        User     @relation(fields: [userId], references: [id])
-  gameType    String   @map("game_type") // wingo, slot, mines, plinko, dice
-  gamePeriod  String?  @map("game_period")
-  betAmount   Float    @map("bet_amount")
-  betChoice   String?  @map("bet_choice") // number, color, etc.
-  result      String?
-  winAmount   Float    @default(0) @map("win_amount")
-  multiplier  Float    @default(0)
-  isWin       Boolean  @default(false) @map("is_win")
-  status      String   @default("pending") // pending, won, lost, cancelled
-  createdAt   DateTime @default(now()) @map("created_at")
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  gameType   String   @map("game_type")
+  gamePeriod String?  @map("game_period")
+  betAmount  Float    @map("bet_amount")
+  betChoice  String?  @map("bet_choice")
+  result     String?
+  winAmount  Float    @default(0) @map("win_amount")
+  multiplier Float    @default(0)
+  isWin      Boolean  @default(false) @map("is_win")
+  status     String   @default("pending")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([gameType])
@@ -83,11 +80,11 @@ model DepositRequest {
   userId        String   @map("user_id")
   user          User     @relation(fields: [userId], references: [id])
   amount        Float
-  method        String   // easypaisa, jazzcash, bank_transfer
+  method        String
   accountNumber String?  @map("account_number")
   accountName   String?  @map("account_name")
-  screenshot    String?  // file path or URL
-  status        String   @default("pending") // pending, approved, rejected
+  screenshot    String?
+  status        String   @default("pending")
   adminNote     String?  @map("admin_note")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -102,10 +99,10 @@ model WithdrawalRequest {
   userId        String   @map("user_id")
   user          User     @relation(fields: [userId], references: [id])
   amount        Float
-  method        String   // easypaisa, jazzcash, bank_transfer
+  method        String
   accountNumber String   @map("account_number")
   accountName   String   @map("account_name")
-  status        String   @default("pending") // pending, approved, rejected, processed
+  status        String   @default("pending")
   adminNote     String?  @map("admin_note")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -121,7 +118,7 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id])
   title     String
   message   String
-  type      String   // deposit_approved, withdrawal_done, win_big, vip_upgrade, system
+  type      String
   isRead    Boolean  @default(false) @map("is_read")
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -135,7 +132,7 @@ model DailyBonus {
   userId      String   @map("user_id")
   user        User     @relation(fields: [userId], references: [id])
   loginDate   DateTime @map("login_date")
-  streakDay   Int      @map("streak_day") // 1-7
+  streakDay   Int      @map("streak_day")
   bonusAmount Float    @map("bonus_amount")
   claimed     Boolean  @default(false)
   createdAt   DateTime @default(now()) @map("created_at")
@@ -160,13 +157,13 @@ model ChatMessage {
 }
 
 model AviatorRound {
-  id                String   @id @default(cuid())
-  crashMultiplier   Float    @map("crash_multiplier")
-  status            String   @default("waiting") // waiting, flying, crashed
-  createdAt         DateTime @default(now()) @map("created_at")
-  endedAt           DateTime? @map("ended_at")
+  id              String   @id @default(cuid())
+  crashMultiplier Float    @map("crash_multiplier")
+  status          String   @default("waiting")
+  createdAt       DateTime @default(now()) @map("created_at")
+  endedAt         DateTime? @map("ended_at")
 
-  bets              AviatorBet[]
+  bets AviatorBet[]
 
   @@index([createdAt])
   @@index([status])
@@ -174,17 +171,17 @@ model AviatorRound {
 }
 
 model AviatorBet {
-  id                  String   @id @default(cuid())
-  userId              String   @map("user_id")
-  user                User     @relation(fields: [userId], references: [id])
-  roundId             String   @map("round_id")
-  round               AviatorRound @relation(fields: [roundId], references: [id])
-  betAmount           Float    @map("bet_amount")
-  cashoutMultiplier   Float?   @map("cashout_multiplier")
-  winAmount           Float    @default(0) @map("win_amount")
-  autoCashout         Float?   @map("auto_cashout")
-  status              String   @default("active") // active, cashed_out, crashed
-  createdAt           DateTime @default(now()) @map("created_at")
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id])
+  roundId           String   @map("round_id")
+  round             AviatorRound @relation(fields: [roundId], references: [id])
+  betAmount         Float    @map("bet_amount")
+  cashoutMultiplier Float?   @map("cashout_multiplier")
+  winAmount         Float    @default(0) @map("win_amount")
+  autoCashout       Float?   @map("auto_cashout")
+  status            String   @default("active")
+  createdAt         DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([roundId])
@@ -193,21 +190,21 @@ model AviatorBet {
 }
 
 model ChickenSession {
-  id                 String   @id @default(cuid())
-  userId             String   @map("user_id")
-  user               User     @relation(fields: [userId], references: [id])
-  betAmount          Float    @map("bet_amount")
-  difficulty         String   // easy, medium, hard, hardcore
-  stepsCompleted     Int      @default(0) @map("steps_completed")
-  totalSteps         Int      @map("total_steps")
-  currentMultiplier  Float    @default(1.0) @map("current_multiplier")
-  cashoutMultiplier  Float?   @map("cashout_multiplier")
-  finalMultiplier    Float?   @map("final_multiplier")
-  status             String   @default("playing") // playing, cashed_out, crashed
-  winAmount          Float    @default(0) @map("win_amount")
-  firePositions      String   @map("fire_positions") // JSON array of fire step indices
-  createdAt          DateTime @default(now()) @map("created_at")
-  endedAt            DateTime? @map("ended_at")
+  id                String   @id @default(cuid())
+  userId            String   @map("user_id")
+  user              User     @relation(fields: [userId], references: [id])
+  betAmount         Float    @map("bet_amount")
+  difficulty        String
+  stepsCompleted    Int      @default(0) @map("steps_completed")
+  totalSteps        Int      @map("total_steps")
+  currentMultiplier Float    @default(1.0) @map("current_multiplier")
+  cashoutMultiplier Float?   @map("cashout_multiplier")
+  finalMultiplier   Float?   @map("final_multiplier")
+  status            String   @default("playing")
+  winAmount         Float    @default(0) @map("win_amount")
+  firePositions     String   @map("fire_positions")
+  createdAt         DateTime @default(now()) @map("created_at")
+  endedAt           DateTime? @map("ended_at")
 
   @@index([userId])
   @@index([status])
