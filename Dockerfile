@@ -1,23 +1,30 @@
-# PurpleWin Club - Dockerfile for Railway.app
-FROM oven/bun:latest AS base
+FROM node:20-slim AS base
 
 WORKDIR /app
 
-# Copy package files first for caching
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+# Install OpenSSL for Prisma
+RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+# Copy package files first for Docker layer caching
+COPY package.json package-lock.json* ./
+
+# Install all dependencies (including devDependencies for prisma)
+RUN npm install
 
 # Copy source code
 COPY . .
 
 # Generate Prisma client
-RUN bun x prisma generate
+RUN npx prisma generate
 
-# Build frontend
-RUN bun run build
+# Build frontend with Vite
+RUN npm run build
+
+# Remove devDependencies after build
+RUN npm prune --production
 
 # Expose port
 EXPOSE 3000
 
-# Start server
-CMD ["bun", "run", "server.ts"]
+# Start server with Node.js
+CMD ["node", "--import", "tsx", "server.ts"]
