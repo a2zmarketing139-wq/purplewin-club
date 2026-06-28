@@ -8,9 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "start": "node --import tsx server.ts",
-    "postinstall": "prisma generate",
-    "db:push": "prisma db push",
     "db:generate": "prisma generate",
+    "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy"
   },
   "dependencies": {
