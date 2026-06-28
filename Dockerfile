@@ -1,6 +1,6 @@
-FROM node:20-slim
+FROM node:20-alpine
 
-RUN apt-get update -y && apt-get install -y openssl
+RUN apk add --no-cache openssl libc6-compat
 
 WORKDIR /app
 
@@ -8,11 +8,11 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 RUN npm install
+RUN npx prisma generate
 
 COPY . .
-
 RUN npm run build
 
 EXPOSE 3000
 
-CMD ["node", "--import", "tsx", "server.ts"]
+CMD ["node", "dist/server.js"]
