@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-import { serveStatic } from 'hono/bun'
+import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { prisma } from './src/lib/db'
 import customRoutes from './custom-routes'
 
@@ -27,4 +28,4 @@ app.get('*', serveStatic({ path: './dist/index.html' }))
 const port = Number(process.env.PORT) || 3000
 console.log(`🚀 PurpleWin Club running on http://localhost:${port}`)
 
-Bun.serve({ port, fetch: app.fetch })
+serve({ port, fetch: app.fetch })
