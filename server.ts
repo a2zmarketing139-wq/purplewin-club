@@ -26,6 +26,19 @@ app.use('/*', serveStatic({ root: './dist' }))
 app.get('*', serveStatic({ path: './dist/index.html' }))
 
 const port = Number(process.env.PORT) || 3000
-console.log(`🚀 PurpleWin Club running on http://localhost:${port}`)
 
-serve({ port, fetch: app.fetch })
+serve({
+  fetch: app.fetch,
+  port,
+  hostname: '0.0.0.0',
+}, (info) => {
+  console.log(`🚀 PurpleWin Club running on http://0.0.0.0:${info.port}`)
+})
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught exception:', err)
+})
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled rejection:', err)
+})
