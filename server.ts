@@ -1,25 +1,26 @@
 import { Hono } from "hono"
+import { cors } from "hono/cors"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
-import customApp from "./custom-routes"
+import app from "./custom-routes"
 
-const app = new Hono()
+const PORT = parseInt(process.env.PORT || "3000")
 
-// Health check — Railway uses this to verify the app is alive
-app.get("/health", (c) => c.json({ ok: true }))
+// Health check at root
+app.get("/health", (c) => c.json({ status: "ok", timestamp: new Date().toISOString() }))
 
-// Mount API routes at /api (frontend fetches /api/auth/login etc.)
-app.route("/api", customApp)
+// CORS for all API routes
+app.use("/api/*", cors())
 
 // Serve static frontend files from dist/
 app.use("/assets/*", serveStatic({ root: "./dist" }))
 app.use("/*.css", serveStatic({ root: "./dist" }))
 app.use("/*.js", serveStatic({ root: "./dist" }))
+app.use("/*.png", serveStatic({ root: "./dist" }))
+app.use("/*.ico", serveStatic({ root: "./dist" }))
 
-// SPA fallback — catch-all returns index.html for client-side routing
+// SPA fallback — non-API, non-static routes serve index.html
 app.get("*", serveStatic({ root: "./dist", path: "index.html" }))
-
-const PORT = parseInt(process.env.PORT || "3000")
 
 serve({
   fetch: app.fetch,
