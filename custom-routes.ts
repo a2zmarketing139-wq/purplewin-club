@@ -10,6 +10,8 @@ const SALT_ROUNDS = 10
 type Variables = { user: any }
 const app = new Hono<{ Variables: Variables }>()
 
+const api = new Hono()
+
 // ─── HELPERS ────────────────────────────────────────────
 function generateReferralCode(): string {
   return Math.floor(100000000000 + Math.random() * 900000000000).toString()
@@ -60,7 +62,7 @@ const authMiddleware = async (c: any, next: any) => {
 // ═══════════════════════════════════════════════════════════
 
 // Register
-app.post('/auth/register', async (c) => {
+api.post('/auth/register', async (c) => {
   try {
     const { phone, password, name, referralCode } = await c.req.json()
 
@@ -163,7 +165,7 @@ app.post('/auth/register', async (c) => {
 })
 
 // Login (handles both admin and user login)
-app.post('/auth/login', async (c) => {
+api.post('/auth/login', async (c) => {
   try {
     const { phone, password } = await c.req.json()
 
@@ -216,7 +218,7 @@ app.post('/auth/login', async (c) => {
 })
 
 // Get current user profile
-app.get('/auth/me', authMiddleware, async (c) => {
+api.get('/auth/me', authMiddleware, async (c) => {
   const user = c.get('user')
   return c.json({
     ok: true,
@@ -255,7 +257,7 @@ app.patch('/auth/profile', authMiddleware, async (c) => {
 // ═══════════════════════════════════════════════════════════
 
 // Get balance
-app.get('/wallet/balance', authMiddleware, async (c) => {
+api.get('/wallet/balance', authMiddleware, async (c) => {
   const user = c.get('user')
   return c.json({
     ok: true,
@@ -268,7 +270,7 @@ app.get('/wallet/balance', authMiddleware, async (c) => {
 })
 
 // Get transaction history
-app.get('/wallet/transactions', authMiddleware, async (c) => {
+api.get('/wallet/transactions', authMiddleware, async (c) => {
   const user = c.get('user')
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '20')
@@ -305,7 +307,7 @@ app.get('/wallet/transactions', authMiddleware, async (c) => {
 })
 
 // Request deposit
-app.post('/wallet/deposit', authMiddleware, async (c) => {
+api.post('/wallet/deposit', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { amount, method, accountNumber, accountName } = await c.req.json()
@@ -347,7 +349,7 @@ app.post('/wallet/deposit', authMiddleware, async (c) => {
 })
 
 // Approve deposit (admin - simplified)
-app.post('/wallet/deposit/:id/approve', authMiddleware, async (c) => {
+api.post('/wallet/deposit/:id/approve', authMiddleware, async (c) => {
   try {
     const { id } = c.req.param()
     const deposit = await prisma.depositRequest.findUnique({ where: { id } })
@@ -396,7 +398,7 @@ app.post('/wallet/deposit/:id/approve', authMiddleware, async (c) => {
 })
 
 // Request withdrawal
-app.post('/wallet/withdraw', authMiddleware, async (c) => {
+api.post('/wallet/withdraw', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { amount, method, accountNumber, accountName } = await c.req.json()
@@ -444,7 +446,7 @@ app.post('/wallet/withdraw', authMiddleware, async (c) => {
 })
 
 // Get deposit history
-app.get('/wallet/deposits', authMiddleware, async (c) => {
+api.get('/wallet/deposits', authMiddleware, async (c) => {
   const user = c.get('user')
   const deposits = await prisma.depositRequest.findMany({
     where: { userId: user.id },
@@ -455,7 +457,7 @@ app.get('/wallet/deposits', authMiddleware, async (c) => {
 })
 
 // Get withdrawal history
-app.get('/wallet/withdrawals', authMiddleware, async (c) => {
+api.get('/wallet/withdrawals', authMiddleware, async (c) => {
   const user = c.get('user')
   const withdrawals = await prisma.withdrawalRequest.findMany({
     where: { userId: user.id },
@@ -470,7 +472,7 @@ app.get('/wallet/withdrawals', authMiddleware, async (c) => {
 // ═══════════════════════════════════════════════════════════
 
 // Place a bet (Wingo)
-app.post('/game/wingo/bet', authMiddleware, async (c) => {
+api.post('/game/wingo/bet', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { amount, betType, betChoice, period } = await c.req.json()
@@ -588,7 +590,7 @@ app.post('/game/wingo/bet', authMiddleware, async (c) => {
 })
 
 // Get bet history
-app.get('/game/history', authMiddleware, async (c) => {
+api.get('/game/history', authMiddleware, async (c) => {
   const user = c.get('user')
   const gameType = c.req.query('game')
   const page = parseInt(c.req.query('page') || '1')
@@ -647,7 +649,7 @@ app.get('/game/history', authMiddleware, async (c) => {
 // ═══════════════════════════════════════════════════════════
 
 // Get referral info
-app.get('/referral/info', authMiddleware, async (c) => {
+api.get('/referral/info', authMiddleware, async (c) => {
   const user = c.get('user')
 
   const [referralCount, referrals, commission] = await Promise.all([
@@ -687,7 +689,7 @@ app.get('/referral/info', authMiddleware, async (c) => {
 // ═══════════════════════════════════════════════════════════
 
 // Get user activity summary
-app.get('/activity/summary', authMiddleware, async (c) => {
+api.get('/activity/summary', authMiddleware, async (c) => {
   const user = c.get('user')
 
   const today = new Date()
@@ -726,7 +728,7 @@ const ADMIN_PHONE = '03052884177'
 const ADMIN_PASS = '@ ZainabAbbas732'
 
 // Admin login (separate from user login)
-app.post('/admin/login', async (c) => {
+api.post('/admin/login', async (c) => {
   const { phone, password } = await c.req.json()
   if (phone === ADMIN_PHONE && password === ADMIN_PASS) {
     const adminToken = jwt.sign({ role: 'admin' }, JWT_SECRET, { expiresIn: '7d' })
@@ -749,7 +751,7 @@ const adminMiddleware = async (c: any, next: any) => {
 }
 
 // Admin: dashboard stats
-app.get('/admin/stats', adminMiddleware, async (c) => {
+api.get('/admin/stats', adminMiddleware, async (c) => {
   const [totalUsers, totalDeposits, totalWithdrawals, pendingDeposits, pendingWithdrawals, totalBets, totalBetAmount] = await Promise.all([
     prisma.user.count(),
     prisma.depositRequest.aggregate({ where: { status: 'approved' }, _sum: { amount: true } }),
@@ -774,7 +776,7 @@ app.get('/admin/stats', adminMiddleware, async (c) => {
 })
 
 // Admin: all users
-app.get('/admin/users', adminMiddleware, async (c) => {
+api.get('/admin/users', adminMiddleware, async (c) => {
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '50')
   const search = c.req.query('search') || ''
@@ -804,7 +806,7 @@ app.get('/admin/users', adminMiddleware, async (c) => {
 })
 
 // Admin: manual balance add/deduct
-app.post('/admin/user/:id/balance', adminMiddleware, async (c) => {
+api.post('/admin/user/:id/balance', adminMiddleware, async (c) => {
   const { id } = c.req.param()
   const { amount, description } = await c.req.json()
   if (!amount || typeof amount !== 'number') return c.json({ error: 'Invalid amount' }, 400)
@@ -832,7 +834,7 @@ app.post('/admin/user/:id/balance', adminMiddleware, async (c) => {
 })
 
 // Admin: toggle user active/inactive
-app.post('/admin/user/:id/toggle', adminMiddleware, async (c) => {
+api.post('/admin/user/:id/toggle', adminMiddleware, async (c) => {
   const { id } = c.req.param()
   const user = await prisma.user.findUnique({ where: { id } })
   if (!user) return c.json({ error: 'User not found' }, 404)
@@ -841,7 +843,7 @@ app.post('/admin/user/:id/toggle', adminMiddleware, async (c) => {
 })
 
 // Admin: all deposits
-app.get('/admin/deposits', adminMiddleware, async (c) => {
+api.get('/admin/deposits', adminMiddleware, async (c) => {
   const status = c.req.query('status') || 'pending'
   const deposits = await prisma.depositRequest.findMany({
     where: { status },
@@ -853,7 +855,7 @@ app.get('/admin/deposits', adminMiddleware, async (c) => {
 })
 
 // Admin: all withdrawals
-app.get('/admin/withdrawals', adminMiddleware, async (c) => {
+api.get('/admin/withdrawals', adminMiddleware, async (c) => {
   const status = c.req.query('status') || 'pending'
   const withdrawals = await prisma.withdrawalRequest.findMany({
     where: { status },
@@ -865,7 +867,7 @@ app.get('/admin/withdrawals', adminMiddleware, async (c) => {
 })
 
 // Admin: approve deposit
-app.post('/admin/deposit/:id/approve', adminMiddleware, async (c) => {
+api.post('/admin/deposit/:id/approve', adminMiddleware, async (c) => {
   const { id } = c.req.param()
   const deposit = await prisma.depositRequest.findUnique({ where: { id } })
   if (!deposit) return c.json({ error: 'Not found' }, 404)
@@ -901,7 +903,7 @@ app.post('/admin/deposit/:id/approve', adminMiddleware, async (c) => {
 })
 
 // Admin: reject deposit
-app.post('/admin/deposit/:id/reject', adminMiddleware, async (c) => {
+api.post('/admin/deposit/:id/reject', adminMiddleware, async (c) => {
   const { id } = c.req.param()
   const { reason } = await c.req.json().catch(() => ({ reason: '' }))
   await prisma.depositRequest.update({ where: { id }, data: { status: 'rejected', adminNote: reason } })
@@ -909,7 +911,7 @@ app.post('/admin/deposit/:id/reject', adminMiddleware, async (c) => {
 })
 
 // Admin: approve withdrawal
-app.post('/admin/withdrawal/:id/approve', adminMiddleware, async (c) => {
+api.post('/admin/withdrawal/:id/approve', adminMiddleware, async (c) => {
   const { id } = c.req.param()
   const withdrawal = await prisma.withdrawalRequest.findUnique({ where: { id } })
   if (!withdrawal) return c.json({ error: 'Not found' }, 404)
@@ -939,7 +941,7 @@ app.post('/admin/withdrawal/:id/approve', adminMiddleware, async (c) => {
 })
 
 // Admin: reject withdrawal
-app.post('/admin/withdrawal/:id/reject', adminMiddleware, async (c) => {
+api.post('/admin/withdrawal/:id/reject', adminMiddleware, async (c) => {
   const { id } = c.req.param()
   const { reason } = await c.req.json().catch(() => ({ reason: '' }))
   await prisma.withdrawalRequest.update({ where: { id }, data: { status: 'rejected', adminNote: reason } })
@@ -950,7 +952,7 @@ app.post('/admin/withdrawal/:id/reject', adminMiddleware, async (c) => {
 // FILE UPLOAD (screenshots)
 // ═══════════════════════════════════════════════════════════
 
-app.post('/upload/screenshot', authMiddleware, async (c) => {
+api.post('/upload/screenshot', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const body = await c.req.parseBody()
@@ -980,7 +982,7 @@ app.post('/upload/screenshot', authMiddleware, async (c) => {
 })
 
 // Serve uploaded files
-app.get('/uploads/:filename', async (c) => {
+api.get('/uploads/:filename', async (c) => {
   const { filename } = c.req.param()
   try {
     const fs = await import('fs')
@@ -1002,7 +1004,7 @@ app.get('/uploads/:filename', async (c) => {
 // LEGACY ADMIN ROUTES (kept for compatibility)
 // ═══════════════════════════════════════════════════════════
 
-app.get('/admin/deposits/pending', async (c) => {
+api.get('/admin/deposits/pending', async (c) => {
   const deposits = await prisma.depositRequest.findMany({
     where: { status: 'pending' },
     include: { user: { select: { name: true, phone: true } } },
@@ -1011,7 +1013,7 @@ app.get('/admin/deposits/pending', async (c) => {
   return c.json({ ok: true, data: { deposits } })
 })
 
-app.get('/admin/withdrawals/pending', async (c) => {
+api.get('/admin/withdrawals/pending', async (c) => {
   const withdrawals = await prisma.withdrawalRequest.findMany({
     where: { status: 'pending' },
     include: { user: { select: { name: true, phone: true } } },
@@ -1024,7 +1026,7 @@ app.get('/admin/withdrawals/pending', async (c) => {
 // LEADERBOARD ROUTES
 // ═══════════════════════════════════════════════════════════
 
-app.get('/leaderboard/today', async (c) => {
+api.get('/leaderboard/today', async (c) => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -1059,7 +1061,7 @@ app.get('/leaderboard/today', async (c) => {
   })
 })
 
-app.get('/leaderboard/weekly', async (c) => {
+api.get('/leaderboard/weekly', async (c) => {
   const weekAgo = new Date()
   weekAgo.setDate(weekAgo.getDate() - 7)
 
@@ -1098,7 +1100,7 @@ app.get('/leaderboard/weekly', async (c) => {
 // CHAT ROUTES
 // ═══════════════════════════════════════════════════════════
 
-app.post('/chat/send', authMiddleware, async (c) => {
+api.post('/chat/send', authMiddleware, async (c) => {
   const user = c.get('user')
   const { message } = await c.req.json()
   if (!message || !message.trim()) return c.json({ error: 'Message required' }, 400)
@@ -1109,7 +1111,7 @@ app.post('/chat/send', authMiddleware, async (c) => {
   return c.json({ ok: true, data: chatMsg })
 })
 
-app.get('/chat/messages', authMiddleware, async (c) => {
+api.get('/chat/messages', authMiddleware, async (c) => {
   const user = c.get('user')
   const messages = await prisma.chatMessage.findMany({
     where: { userId: user.id },
@@ -1124,7 +1126,7 @@ app.get('/chat/messages', authMiddleware, async (c) => {
   return c.json({ ok: true, data: { messages } })
 })
 
-app.get('/chat/unread', authMiddleware, async (c) => {
+api.get('/chat/unread', authMiddleware, async (c) => {
   const user = c.get('user')
   const count = await prisma.chatMessage.count({
     where: { userId: user.id, isAdmin: true, isRead: false },
@@ -1133,7 +1135,7 @@ app.get('/chat/unread', authMiddleware, async (c) => {
 })
 
 // Admin chat routes
-app.get('/admin/chat/users', adminMiddleware, async (c) => {
+api.get('/admin/chat/users', adminMiddleware, async (c) => {
   const usersWithChat = await prisma.chatMessage.groupBy({
     by: ['userId'],
     _count: true,
@@ -1168,7 +1170,7 @@ app.get('/admin/chat/users', adminMiddleware, async (c) => {
   })
 })
 
-app.get('/admin/chat/messages/:userId', adminMiddleware, async (c) => {
+api.get('/admin/chat/messages/:userId', adminMiddleware, async (c) => {
   const { userId } = c.req.param()
   const messages = await prisma.chatMessage.findMany({
     where: { userId },
@@ -1183,7 +1185,7 @@ app.get('/admin/chat/messages/:userId', adminMiddleware, async (c) => {
   return c.json({ ok: true, data: { messages } })
 })
 
-app.post('/admin/chat/send', adminMiddleware, async (c) => {
+api.post('/admin/chat/send', adminMiddleware, async (c) => {
   const { userId, message } = await c.req.json()
   if (!userId || !message) return c.json({ error: 'userId and message required' }, 400)
 
@@ -1197,7 +1199,7 @@ app.post('/admin/chat/send', adminMiddleware, async (c) => {
 // VIP ROUTES
 // ═══════════════════════════════════════════════════════════
 
-app.get('/vip/info', authMiddleware, async (c) => {
+api.get('/vip/info', authMiddleware, async (c) => {
   const user = c.get('user')
   const vipLevels = [
     { level: 1, name: 'Bronze', minDeposit: 0, dailyBonus: 10, color: '#cd7f32' },
@@ -1227,7 +1229,7 @@ app.get('/vip/info', authMiddleware, async (c) => {
 // DAILY BONUS ROUTES
 // ═══════════════════════════════════════════════════════════
 
-app.get('/daily-bonus/status', authMiddleware, async (c) => {
+api.get('/daily-bonus/status', authMiddleware, async (c) => {
   const user = c.get('user')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -1268,7 +1270,7 @@ app.get('/daily-bonus/status', authMiddleware, async (c) => {
   })
 })
 
-app.post('/daily-bonus/claim', authMiddleware, async (c) => {
+api.post('/daily-bonus/claim', authMiddleware, async (c) => {
   const user = c.get('user')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -1347,7 +1349,7 @@ app.post('/daily-bonus/claim', authMiddleware, async (c) => {
 // NOTIFICATION ROUTES (prefixed /user/ to avoid CRUD conflict)
 // ═══════════════════════════════════════════════════════════
 
-app.get('/user/notifications', authMiddleware, async (c) => {
+api.get('/user/notifications', authMiddleware, async (c) => {
   const user = c.get('user')
   const notifications = await prisma.notification.findMany({
     where: { userId: user.id },
@@ -1357,7 +1359,7 @@ app.get('/user/notifications', authMiddleware, async (c) => {
   return c.json({ ok: true, data: { notifications } })
 })
 
-app.get('/user/notifications/unread', authMiddleware, async (c) => {
+api.get('/user/notifications/unread', authMiddleware, async (c) => {
   const user = c.get('user')
   const count = await prisma.notification.count({
     where: { userId: user.id, isRead: false },
@@ -1365,7 +1367,7 @@ app.get('/user/notifications/unread', authMiddleware, async (c) => {
   return c.json({ ok: true, data: { count } })
 })
 
-app.post('/user/notifications/read', authMiddleware, async (c) => {
+api.post('/user/notifications/read', authMiddleware, async (c) => {
   const user = c.get('user')
   await prisma.notification.updateMany({
     where: { userId: user.id, isRead: false },
@@ -1375,7 +1377,7 @@ app.post('/user/notifications/read', authMiddleware, async (c) => {
 })
 
 // Admin: send notification to user
-app.post('/admin/notify', adminMiddleware, async (c) => {
+api.post('/admin/notify', adminMiddleware, async (c) => {
   const { userId, title, message, type } = await c.req.json()
   if (!userId || !title || !message) return c.json({ error: 'Missing fields' }, 400)
 
@@ -1389,7 +1391,7 @@ app.post('/admin/notify', adminMiddleware, async (c) => {
 // GAME CONTROL (Admin)
 // ═══════════════════════════════════════════════════════════
 
-app.get('/admin/bets', adminMiddleware, async (c) => {
+api.get('/admin/bets', adminMiddleware, async (c) => {
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '50')
   const skip = (page - 1) * limit
@@ -1464,7 +1466,7 @@ function generateCrashMultiplier(): number {
 }
 
 // Get current/next round
-app.get('/aviator/current-round', authMiddleware, async (c) => {
+api.get('/aviator/current-round', authMiddleware, async (c) => {
   try {
     let round = await prisma.aviatorRound.findFirst({ where: { status: 'waiting' }, orderBy: { createdAt: 'desc' } })
     if (!round) {
@@ -1485,7 +1487,7 @@ app.get('/aviator/current-round', authMiddleware, async (c) => {
 })
 
 // Place Aviator bet
-app.post('/aviator/bet', authMiddleware, async (c) => {
+api.post('/aviator/bet', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { amount, autoCashout, roundId } = await c.req.json()
@@ -1534,7 +1536,7 @@ app.post('/aviator/bet', authMiddleware, async (c) => {
 })
 
 // Cashout Aviator
-app.post('/aviator/cashout', authMiddleware, async (c) => {
+api.post('/aviator/cashout', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { betId, multiplier } = await c.req.json()
@@ -1577,7 +1579,7 @@ app.post('/aviator/cashout', authMiddleware, async (c) => {
 })
 
 // Start round (server triggers this — for demo, any bet auto-starts)
-app.post('/aviator/start-round', authMiddleware, async (c) => {
+api.post('/aviator/start-round', authMiddleware, async (c) => {
   const round = await prisma.aviatorRound.findFirst({ where: { status: 'waiting' }, orderBy: { createdAt: 'desc' } })
   if (!round) return c.json({ error: 'No waiting round' }, 404)
 
@@ -1631,7 +1633,7 @@ function generateFirePositions(totalSteps: number, fireCount: number): number[] 
 }
 
 // Start chicken session
-app.post('/chicken/start', authMiddleware, async (c) => {
+api.post('/chicken/start', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { amount, difficulty } = await c.req.json()
@@ -1686,7 +1688,7 @@ app.post('/chicken/start', authMiddleware, async (c) => {
 })
 
 // Step forward in chicken
-app.post('/chicken/step', authMiddleware, async (c) => {
+api.post('/chicken/step', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { sessionId } = await c.req.json()
@@ -1731,7 +1733,7 @@ app.post('/chicken/step', authMiddleware, async (c) => {
 })
 
 // Cashout chicken
-app.post('/chicken/cashout', authMiddleware, async (c) => {
+api.post('/chicken/cashout', authMiddleware, async (c) => {
   try {
     const user = c.get('user')
     const { sessionId } = await c.req.json()
@@ -1772,7 +1774,7 @@ app.post('/chicken/cashout', authMiddleware, async (c) => {
 })
 
 // Get chicken session info (for polling)
-app.get('/chicken/session/:id', authMiddleware, async (c) => {
+api.get('/chicken/session/:id', authMiddleware, async (c) => {
   const { id } = c.req.param()
   const session = await prisma.chickenSession.findUnique({ where: { id }, select: { id: true, betAmount: true, difficulty: true, stepsCompleted: true, totalSteps: true, currentMultiplier: true, status: true, winAmount: true } })
   if (!session) return c.json({ error: 'Not found' }, 404)
@@ -1783,7 +1785,7 @@ app.get('/chicken/session/:id', authMiddleware, async (c) => {
 // ADMIN: AVIATOR & CHICKEN HISTORY
 // ═══════════════════════════════════════════════════════════
 
-app.get('/admin/aviator/rounds', adminMiddleware, async (c) => {
+api.get('/admin/aviator/rounds', adminMiddleware, async (c) => {
   const rounds = await prisma.aviatorRound.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50,
@@ -1804,7 +1806,7 @@ app.get('/admin/aviator/rounds', adminMiddleware, async (c) => {
   })
 })
 
-app.get('/admin/chicken/sessions', adminMiddleware, async (c) => {
+api.get('/admin/chicken/sessions', adminMiddleware, async (c) => {
   const sessions = await prisma.chickenSession.findMany({
     orderBy: { createdAt: 'desc' },
     take: 50,
@@ -1824,6 +1826,8 @@ app.get('/admin/chicken/sessions', adminMiddleware, async (c) => {
     },
   })
 })
+
+app.route("/api", api)
 
 export default app
 
