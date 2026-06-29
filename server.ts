@@ -1,19 +1,25 @@
+import { Hono } from "hono"
 import { serve } from "@hono/node-server"
 import { serveStatic } from "@hono/node-server/serve-static"
-import app from "./custom-routes"
+import customApp from "./custom-routes"
 
-const PORT = parseInt(process.env.PORT || "3000")
+const app = new Hono()
+
+// Health check — Railway uses this to verify the app is alive
+app.get("/health", (c) => c.json({ ok: true }))
+
+// Mount API routes at /api (frontend fetches /api/auth/login etc.)
+app.route("/api", customApp)
 
 // Serve static frontend files from dist/
 app.use("/assets/*", serveStatic({ root: "./dist" }))
 app.use("/*.css", serveStatic({ root: "./dist" }))
 app.use("/*.js", serveStatic({ root: "./dist" }))
-app.use("/*.png", serveStatic({ root: "./dist" }))
-app.use("/*.ico", serveStatic({ root: "./dist" }))
-app.use("/favicon.ico", serveStatic({ root: "./dist" }))
 
-// Serve index.html for all non-API routes (SPA fallback)
+// SPA fallback — catch-all returns index.html for client-side routing
 app.get("*", serveStatic({ root: "./dist", path: "index.html" }))
+
+const PORT = parseInt(process.env.PORT || "3000")
 
 serve({
   fetch: app.fetch,
