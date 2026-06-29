@@ -3,7 +3,7 @@ services:
     name: purplewin-club
     env: node
     buildCommand: NODE_ENV=development npm install && npx prisma generate && NODE_ENV=development npm run build
-    startCommand: npx prisma db push && node dist/server.js
+    startCommand: npx prisma migrate deploy && npx tsx server.ts
     envVars:
       - key: NODE_ENV
         value: production
